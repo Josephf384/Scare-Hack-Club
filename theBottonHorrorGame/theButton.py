@@ -5,12 +5,24 @@
 # in something scary
 #
 # Author: Joseph Fong
+from pathlib import Path
 import pygame #import pygame lib 
 import math #import math module
 import random #import random module
 pygame.init() #initialize pygame functions
 
 screen = pygame.display.set_mode((800, 600)) #set display to 800by600 pixels
+
+asset_folder = Path(__file__).parent / "assets"
+jumpscare_image = pygame.image.load(
+    asset_folder / "jumpscare.png"
+).convert()
+jumpscare_image = pygame.transform.smoothscale(
+    jumpscare_image, (screen.get_width() + 20, screen.get_height() + 20)
+)
+
+jumpscare_sound = pygame.mixer.Sound(asset_folder / "jumpscare.wav")
+jumpscare_sound.set_volume(0.65)
 clock = pygame.time.Clock()
 pygame.display.set_caption("The Button") #set tab title to "The Button"
 
@@ -31,6 +43,7 @@ order_text = order_font.render(
     "ORDER 01: DO NOT PRESS", True, (210, 190, 170)
 )
 game_state = "playing"
+jumpscare_started_at = 0
 round_length = 10
 round_started_at = pygame.time.get_ticks()
 timer_font = pygame.font.SysFont(None, 26, bold=True)
@@ -76,6 +89,8 @@ while running:
                 if game_state == "playing":
                     button_down = True
                     game_state = "broken"
+                    jumpscare_started_at = pygame.time.get_ticks()
+                    jumpscare_sound.play()
                     order_text = order_font.render(
                         "ORDER BROKEN", True, (255, 60, 70)
                     )
@@ -111,6 +126,8 @@ while running:
                     )
                 else:
                     game_state = "broken"
+                    jumpscare_started_at = pygame.time.get_ticks()
+                    jumpscare_sound.play()
                     order_text = order_font.render(
                         "MEMORY WRONG", True, (255, 60, 70)
                     )
@@ -120,6 +137,32 @@ while running:
                     label_text = label_font.render(
                         "FAILED", True, (255, 100, 110)
                     )
+
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
+            if game_state in ("broken", "complete"):
+                game_state = "playing"
+                jumpscare_started_at = 0
+                round_started_at = pygame.time.get_ticks()
+                memory_number = random.randint(2, 10)
+                memory_started_at = 0
+                current_command_index = 0
+                command_clicks = 0
+                recall_clicks = 0
+                command_started_at = 0
+                button_down = False
+                press_depth = 0.0
+                order_text = order_font.render(
+                    "ORDER 01: DO NOT PRESS", True, (210, 190, 170)
+                )
+                subtitle_text = subtitle_font.render(
+                    "It is watching.", True, (150, 130, 140)
+                )
+                status_text = status_font.render(
+                    "SYSTEM: STANDBY", True, (150, 160, 150)
+                )
+                label_text = label_font.render(
+                    "PRESS", True, (255, 235, 235)
+                )
     elapsed_seconds = (
         pygame.time.get_ticks() - round_started_at
     ) // 1000
@@ -203,6 +246,8 @@ while running:
                     )
             else:
                 game_state = "broken"
+                jumpscare_started_at = pygame.time.get_ticks()
+                jumpscare_sound.play()
                 order_text = order_font.render(
                     "ORDER BROKEN", True, (255, 60, 70)
                 )
@@ -212,6 +257,15 @@ while running:
                 label_text = label_font.render(
                     "FAILED", True, (255, 100, 110)
                 )
+
+    if game_state == "broken" and pygame.time.get_ticks() - jumpscare_started_at >= 900:
+        status_text = status_font.render(
+            "PRESS R TO RETRY", True, (255, 150, 160)
+        )
+    elif game_state == "complete":
+        status_text = status_font.render(
+            "PRESS R TO PLAY AGAIN", True, (160, 230, 170)
+        )
 
     if game_state == "playing":
         timer_message = f"TIME LEFT: {seconds_left}"
@@ -326,6 +380,14 @@ while running:
 
     status_rect = status_text.get_rect(center=(400, 522))
     screen.blit(status_text, status_rect)
+
+    if game_state == "broken":
+        scare_elapsed = pygame.time.get_ticks() - jumpscare_started_at
+
+        if scare_elapsed < 900:
+            shake_x = random.randint(-8, 8)
+            shake_y = random.randint(-8, 8)
+            screen.blit(jumpscare_image, (shake_x - 10, shake_y - 10))
 
     pygame.display.flip()
     clock.tick(60)
