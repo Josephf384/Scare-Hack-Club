@@ -1,2 +1,2 @@
 # Scare-Hack-Club
-hack club halloween scare project
+HACK CLUB HALLOWEEN SCARE PROJECT 2026
